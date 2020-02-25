@@ -109,12 +109,12 @@ func (params *Parameters) MarshalJSON() ([]byte, error) {
 }
 
 func (params *Parameters) UnmarshalJSON(jsonData []byte) error {
-	var outputError error
+	var err error
 
 	switch jsonData[0] {
 	case '[':
 		var data []json.RawMessage
-		if outputError := json.Unmarshal(jsonData, &data); outputError != nil {
+		if err = json.Unmarshal(jsonData, &data); err != nil {
 			break
 		}
 
@@ -124,15 +124,15 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) error {
 		break
 	case '{':
 		var data map[string]json.RawMessage
-		if outputError := json.Unmarshal(jsonData, &data); outputError != nil {
+		if err = json.Unmarshal(jsonData, &data); err != nil {
 			break
 		}
 
 		params.values = data
 		break
 	default:
-		outputError = errors.New("unable to parse parameters")
+		err = errors.New("unable to parse parameters")
 	}
 
-	return outputError
+	return err
 }
