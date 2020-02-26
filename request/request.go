@@ -9,17 +9,17 @@ import (
 type Request struct {
 	requestType string
 	id          string
-	JsonRpc     string
-	Method      string
-	Params      *parameters.Parameters
+	jsonRpc     string
+	method      string
+	params      *parameters.Parameters
 }
 
 func NewNotification(method string, params *parameters.Parameters) *Request {
 	return &Request{
 		requestType: "notification",
-		JsonRpc:     "2.0",
-		Method:      method,
-		Params:      params,
+		jsonRpc:     "2.0",
+		method:      method,
+		params:      params,
 	}
 }
 
@@ -32,9 +32,9 @@ func NewRequest(method, id string, params *parameters.Parameters) *Request {
 	return &Request{
 		requestType: "request",
 		id:          id,
-		JsonRpc:     "2.0",
-		Method:      method,
-		Params:      params,
+		jsonRpc:     "2.0",
+		method:      method,
+		params:      params,
 	}
 }
 
@@ -42,14 +42,14 @@ func (req *Request) Serialize() (json.RawMessage, error) {
 	data := map[string]json.RawMessage{}
 	var err error
 
-	params, err := json.Marshal(req.Params)
+	params, err := json.Marshal(req.params)
 
 	if err != nil {
 		return nil, err
 	}
 
-	data["jsonrpc"] = []byte(`"` + req.JsonRpc + `"`)
-	data["method"] = []byte(`"` + req.Method + `"`)
+	data["jsonrpc"] = []byte(`"` + req.jsonRpc + `"`)
+	data["method"] = []byte(`"` + req.method + `"`)
 	data["params"] = params
 
 	if req.requestType != "notification" {
@@ -86,9 +86,9 @@ func (req *Request) UnmarshalJSON(jsonData []byte) error {
 		req.requestType = "request"
 	}
 
-	err = json.Unmarshal(jsonReq["params"], req.Params)
-	err = json.Unmarshal(jsonReq["method"], &req.Method)
-	err = json.Unmarshal(jsonReq["jsonrpc"], &req.JsonRpc)
+	err = json.Unmarshal(jsonReq["params"], req.params)
+	err = json.Unmarshal(jsonReq["method"], &req.method)
+	err = json.Unmarshal(jsonReq["jsonrpc"], &req.jsonRpc)
 
 	return err
 }
