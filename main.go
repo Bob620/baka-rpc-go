@@ -1,16 +1,18 @@
 package main
 
 import (
+	"baka-rpc-go/errors"
 	"baka-rpc-go/parameters"
 	"baka-rpc-go/request"
+	"baka-rpc-go/response"
 	"encoding/json"
 	"fmt"
 )
 
 func main() {
-	noMethodError := NewMethodNotFound()
+	noMethodError := errors.NewMethodNotFound()
 	testString := "testReq"
-	output, err := json.Marshal(NewErrorResponse(&testString, noMethodError))
+	output, err := json.Marshal(response.NewErrorResponse(testString, noMethodError))
 	if err != nil {
 		return
 	}
@@ -18,7 +20,7 @@ func main() {
 	fmt.Printf("%s\n", output)
 
 	result := []byte(`1`)
-	output, err = json.Marshal(NewSuccessResponse(&testString, result))
+	output, err = json.Marshal(response.NewSuccessResponse(testString, result))
 	if err != nil {
 		return
 	}
