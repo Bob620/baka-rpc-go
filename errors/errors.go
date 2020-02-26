@@ -1,4 +1,4 @@
-package main
+package errors
 
 type RPCError struct {
 	Code    int    `json:"code"`
