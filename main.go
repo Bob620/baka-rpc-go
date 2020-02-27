@@ -5,6 +5,7 @@ import (
 	"baka-rpc-go/parameters"
 	"baka-rpc-go/request"
 	"baka-rpc-go/response"
+	"baka-rpc-go/rpc"
 	"encoding/json"
 	"fmt"
 )
@@ -75,4 +76,15 @@ func main() {
 	}
 
 	fmt.Printf("%s\n", output)
+
+	rpcClient := rpc.BakaRpc{}
+	rpcClient.RegisterMethod(rpc.Method{
+		Name: "idk",
+		Params: []rpc.MethodParam{
+			&rpc.StringParam{Name: "test"},
+		},
+	}, func(params parameters.Parameters) (message *json.RawMessage, err error) {
+
+		return
+	})
 }

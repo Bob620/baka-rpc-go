@@ -54,17 +54,17 @@ func (params *Parameters) Get(key string) json.RawMessage {
 
 func (params *Parameters) GetString(key string) (value string, err error) {
 	err = json.Unmarshal(params.Get(key), &value)
-	return value, err
+	return
 }
 
 func (params *Parameters) GetFloat(key string) (value float64, err error) {
 	err = json.Unmarshal(params.Get(key), &value)
-	return value, err
+	return
 }
 
 func (params *Parameters) GetInt(key string) (value int, err error) {
 	err = json.Unmarshal(params.Get(key), &value)
-	return value, err
+	return
 }
 
 func (params *Parameters) Serialize() (data json.RawMessage, err error) {
@@ -126,5 +126,5 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 		err = errors.New("unable to parse parameters")
 	}
 
-	return err
+	return
 }

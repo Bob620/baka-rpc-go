@@ -1,7 +1,6 @@
-package main
+package rpc
 
 import (
-	"baka-rpc-go/errors"
 	"baka-rpc-go/parameters"
 	"encoding/json"
 )
@@ -13,15 +12,16 @@ type BakaRpc struct {
 }
 
 type Method struct {
-	name   string
-	params []MethodParam
+	Name   string
+	Params []MethodParam
 }
 
-type MethodParam struct {
-	name string
+type MethodParam interface {
+	getName() string
+	getData() json.RawMessage
 }
 
-func (rpc *BakaRpc) RegisterMethod(method Method, methodFunc func(parameters parameters.Parameters) (*json.RawMessage, *errors.RPCError)) {
+func (rpc *BakaRpc) RegisterMethod(method Method, methodFunc func(params parameters.Parameters) (*json.RawMessage, error)) {
 
 }
 
