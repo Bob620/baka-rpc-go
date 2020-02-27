@@ -24,9 +24,9 @@ func NewParametersByPosition() *Parameters {
 	return newParameters("byPosition")
 }
 
-func (params *Parameters) Set(key string, value json.RawMessage) error {
+func (params *Parameters) Set(key string, value json.RawMessage) (err error) {
 	if params.paramType == "byPosition" {
-		_, err := strconv.Atoi(key)
+		_, err = strconv.Atoi(key)
 		if err != nil {
 			return err
 		}
@@ -52,28 +52,22 @@ func (params *Parameters) Get(key string) json.RawMessage {
 	return params.values[key]
 }
 
-func (params *Parameters) GetString(key string) (string, error) {
-	var value string
-	err := json.Unmarshal(params.Get(key), &value)
+func (params *Parameters) GetString(key string) (value string, err error) {
+	err = json.Unmarshal(params.Get(key), &value)
 	return value, err
 }
 
-func (params *Parameters) GetFloat(key string) (float64, error) {
-	var value float64
-	err := json.Unmarshal(params.Get(key), &value)
+func (params *Parameters) GetFloat(key string) (value float64, err error) {
+	err = json.Unmarshal(params.Get(key), &value)
 	return value, err
 }
 
-func (params *Parameters) GetInt(key string) (int, error) {
-	var value int
-	err := json.Unmarshal(params.Get(key), &value)
+func (params *Parameters) GetInt(key string) (value int, err error) {
+	err = json.Unmarshal(params.Get(key), &value)
 	return value, err
 }
 
-func (params *Parameters) Serialize() (json.RawMessage, error) {
-	var data json.RawMessage
-	var err error
-
+func (params *Parameters) Serialize() (data json.RawMessage, err error) {
 	if params.paramType == "byName" {
 		data, err = json.Marshal(params.values)
 	} else {
@@ -108,9 +102,7 @@ func (params *Parameters) MarshalJSON() ([]byte, error) {
 	return params.Serialize()
 }
 
-func (params *Parameters) UnmarshalJSON(jsonData []byte) error {
-	var err error
-
+func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 	switch jsonData[0] {
 	case '[':
 		var data []json.RawMessage

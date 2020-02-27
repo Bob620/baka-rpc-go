@@ -38,9 +38,8 @@ func NewRequest(method, id string, params *parameters.Parameters) *Request {
 	}
 }
 
-func (req *Request) Serialize() (json.RawMessage, error) {
+func (req *Request) Serialize() (message json.RawMessage, err error) {
 	data := map[string]json.RawMessage{}
-	var err error
 
 	params, err := json.Marshal(req.params)
 
@@ -63,10 +62,9 @@ func (req *Request) MarshalJSON() ([]byte, error) {
 	return req.Serialize()
 }
 
-func (req *Request) UnmarshalJSON(jsonData []byte) error {
+func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 	var jsonReq map[string]json.RawMessage
 	var item string
-	var err error
 
 	req.requestType = "notification"
 	err = json.Unmarshal(jsonData, &jsonReq)
@@ -90,5 +88,5 @@ func (req *Request) UnmarshalJSON(jsonData []byte) error {
 	err = json.Unmarshal(jsonReq["method"], &req.method)
 	err = json.Unmarshal(jsonReq["jsonrpc"], &req.jsonRpc)
 
-	return err
+	return
 }

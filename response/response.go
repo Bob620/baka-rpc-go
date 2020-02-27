@@ -63,10 +63,9 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 	return res.Serialize()
 }
 
-func (res *Response) UnmarshalJSON(jsonData []byte) error {
+func (res *Response) UnmarshalJSON(jsonData []byte) (err error) {
 	var jsonReq map[string]json.RawMessage
 	var item string
-	var err error
 
 	res.responseType = "error"
 	err = json.Unmarshal(jsonData, &jsonReq)
