@@ -31,6 +31,18 @@ func NewErrorResponse(id string, error *errors.RPCError) *Response {
 	}
 }
 
+func (res *Response) GetType() string {
+	return res.responseType
+}
+
+func (res *Response) GetResult() *json.RawMessage {
+	return res.result
+}
+
+func (res *Response) GetError() *errors.RPCError {
+	return res.error
+}
+
 func (res *Response) Serialize() (json.RawMessage, error) {
 	data := map[string]json.RawMessage{}
 

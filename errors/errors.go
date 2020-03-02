@@ -39,3 +39,10 @@ func NewInternalError() *RPCError {
 		Message: "Internal error",
 	}
 }
+
+func NewGenericError(err string) *RPCError {
+	return &RPCError{
+		Code:    -32000,
+		Message: err,
+	}
+}

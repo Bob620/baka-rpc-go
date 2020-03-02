@@ -77,14 +77,21 @@ func main() {
 
 	fmt.Printf("%s\n", output)
 
-	rpcClient := rpc.BakaRpc{}
-	rpcClient.RegisterMethod(rpc.Method{
-		Name: "idk",
-		Params: []rpc.MethodParam{
-			&rpc.StringParam{Name: "test"},
-		},
-	}, func(params parameters.Parameters) (message *json.RawMessage, err error) {
+	rpcClient := rpc.CreateBakaRpc(nil, nil)
+	rpcClient.RegisterMethod(
+		"idk",
+		[]rpc.MethodParam{
+			rpc.StringParam{Name: "test"},
+		}, func(params map[string]rpc.MethodParam) (returnMessage json.RawMessage, err error) {
+			test := params["test"].(rpc.StringParam)
 
-		return
-	})
+			return json.Marshal(test.Default)
+		})
+
+	data := rpcClient.CallMethod("idk", map[string]rpc.MethodParam{"test": rpc.StringParam{Name: "test", Default: "ahhhhh"}})
+	if data.GetType() == "success" {
+		fmt.Printf("%s\n", *data.GetResult())
+	} else {
+		fmt.Println(data.GetError())
+	}
 }
