@@ -31,6 +31,14 @@ func NewErrorResponse(id string, error *errors.RPCError) *Response {
 	}
 }
 
+func (res *Response) GetRpcVersion() string {
+	return res.jsonRpc
+}
+
+func (res *Response) GetId() string {
+	return res.id
+}
+
 func (res *Response) GetType() string {
 	return res.responseType
 }
@@ -46,6 +54,7 @@ func (res *Response) GetError() *errors.RPCError {
 func (res *Response) Serialize() (json.RawMessage, error) {
 	data := map[string]json.RawMessage{}
 
+	// Requires error or result but not both
 	if res.responseType == "error" {
 		resErr, err := json.Marshal(res.error)
 		if err != nil {
@@ -60,10 +69,12 @@ func (res *Response) Serialize() (json.RawMessage, error) {
 		data["result"] = result
 	}
 
+	// Required
 	data["jsonrpc"] = []byte(`"` + res.jsonRpc + `"`)
 
+	// May be omitted if error
 	if res.id == "" {
-		data["id"] = []byte(`nil`)
+		data["id"] = []byte(`null`)
 	} else {
 		data["id"] = []byte(`"` + res.id + `"`)
 	}
@@ -77,31 +88,39 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 
 func (res *Response) UnmarshalJSON(jsonData []byte) (err error) {
 	var jsonReq map[string]json.RawMessage
-	var item string
 
+	res.jsonRpc = ""
 	res.responseType = "error"
 	err = json.Unmarshal(jsonData, &jsonReq)
 	if err != nil {
-		return err
+		return
 	}
 
+	// May be omitted for broken requests
 	if jsonReq["id"] != nil {
+		var item string
 		err = json.Unmarshal(jsonReq["id"], &item)
 		if err != nil {
-			return err
+			return
+		}
+
+		if item != "" {
+			res.id = item
 		}
 	}
 
-	if item != "" {
-		res.id = item
-	}
-
-	err = json.Unmarshal(jsonReq["jsonrpc"], &res.jsonRpc)
+	// Requires error or result but not both
 	if jsonReq["error"] != nil {
 		err = json.Unmarshal(jsonReq["error"], res.error)
 	} else if jsonReq["result"] != nil {
 		err = json.Unmarshal(jsonReq["result"], res.result)
 	}
 
-	return err
+	// Don't set the rpc version if an error occurred
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(jsonReq["jsonrpc"], &res.jsonRpc)
+
+	return
 }
