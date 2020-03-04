@@ -75,12 +75,12 @@ func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
 	return rpc
 }
 
-func (rpc *bakaRpc) handleRequest(req request.Request) {
-
+func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage, err error) {
+	return
 }
 
-func (rpc *bakaRpc) handleResponse(res response.Response) {
-
+func (rpc *bakaRpc) handleResponse(res response.Response) (message json.RawMessage, err error) {
+	return
 }
 
 func (rpc *bakaRpc) start() {
@@ -105,7 +105,16 @@ func (rpc *bakaRpc) start() {
 					data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), errors.NewInvalidRequest()))
 					go rpc.sendMessage(data)
 				} else {
-					go rpc.handleRequest(req)
+					go func() {
+						message, err := rpc.handleRequest(req)
+						if err != nil {
+							data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), errors.NewGenericError(err.Error())))
+							rpc.sendMessage(data)
+						} else {
+							data, _ := json.Marshal(response.NewSuccessResponse(req.GetId(), message))
+							rpc.sendMessage(data)
+						}
+					}()
 				}
 			}
 
@@ -114,7 +123,16 @@ func (rpc *bakaRpc) start() {
 					data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewInvalidRequest()))
 					go rpc.sendMessage(data)
 				} else {
-					go rpc.handleResponse(res)
+					go func() {
+						message, err := rpc.handleResponse(res)
+						if err != nil {
+							data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewGenericError(err.Error())))
+							rpc.sendMessage(data)
+						} else {
+							data, _ := json.Marshal(response.NewSuccessResponse(res.GetId(), message))
+							rpc.sendMessage(data)
+						}
+					}()
 				}
 			}
 		}
