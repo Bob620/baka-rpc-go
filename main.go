@@ -81,17 +81,18 @@ func main() {
 	rpcClient.RegisterMethod(
 		"idk",
 		[]rpc.MethodParam{
-			rpc.StringParam{Name: "test"},
+			&rpc.StringParam{Name: "test"},
 		}, func(params map[string]rpc.MethodParam) (returnMessage json.RawMessage, err error) {
-			test := params["test"].(rpc.StringParam)
+			test := params["test"].(*rpc.StringParam)
 
 			return json.Marshal(test.Default)
 		})
 
-	data := rpcClient.CallMethod("idk", map[string]rpc.MethodParam{"test": rpc.StringParam{Name: "test", Default: "ahhhhh"}})
-	if data.GetType() == "success" {
-		fmt.Printf("%s\n", *data.GetResult())
-	} else {
-		fmt.Println(data.GetError())
+	data, errData := rpcClient.CallLocalMethod("idk", map[string]rpc.MethodParam{"test": &rpc.StringParam{Name: "test", Default: "ahhhhh"}})
+	if errData != nil {
+		fmt.Println(errData.GetError())
+		return
 	}
+
+	fmt.Printf("%s\n", *data.GetResult())
 }
