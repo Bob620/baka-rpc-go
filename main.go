@@ -1,90 +1,42 @@
 package main
 
 import (
-	"baka-rpc-go/errors"
-	"baka-rpc-go/parameters"
-	"baka-rpc-go/request"
-	"baka-rpc-go/response"
-	"baka-rpc-go/rpc"
 	"encoding/json"
 	"fmt"
+
+	"baka-rpc-go/parameters"
+	"baka-rpc-go/rpc"
 )
 
 func main() {
-	noMethodError := errors.NewMethodNotFound()
-	testString := "testReq"
-	output, err := json.Marshal(response.NewErrorResponse(testString, noMethodError))
-	if err != nil {
-		return
-	}
+	chanOne := make(chan []byte)
+	chanTwo := make(chan []byte)
 
-	fmt.Printf("%s\n", output)
-
-	result := []byte(`1`)
-	output, err = json.Marshal(response.NewSuccessResponse(testString, result))
-	if err != nil {
-		return
-	}
-
-	fmt.Printf("%s\n", output)
-
-	params := parameters.NewParametersByPosition()
-	params.SetString("3", "\"hi")
-	params.SetFloat("2", 0.7)
-	output, err = json.Marshal(request.NewRequest("", "", params))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Printf("%s\n", output)
-
-	params = parameters.NewParametersByPosition()
-	testReq := request.NewRequest("", "", params)
-	err = json.Unmarshal(output, &testReq)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	output, err = json.Marshal(testReq)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Printf("%s\n", output)
-
-	output, err = json.Marshal(request.NewNotification("", params))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	params = parameters.NewParametersByPosition()
-	testNotif := request.NewRequest("", "", params)
-	err = json.Unmarshal(output, &testNotif)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	output, err = json.Marshal(testNotif)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Printf("%s\n", output)
-
-	rpcClient := rpc.CreateBakaRpc(nil, nil)
+	rpcClient := rpc.CreateBakaRpc(chanOne, chanTwo)
+	rpcClient2 := rpc.CreateBakaRpc(chanTwo, chanOne)
 	rpcClient.RegisterMethod(
 		"idk",
 		[]rpc.MethodParam{
 			&rpc.StringParam{Name: "test"},
 		}, func(params map[string]rpc.MethodParam) (returnMessage json.RawMessage, err error) {
-			test := params["test"].(*rpc.StringParam)
+			test, _ := params["test"].(*rpc.StringParam).GetString()
 
-			return json.Marshal(test.Default)
+			return json.Marshal(test)
 		})
+
+	params := parameters.NewParametersByName()
+	params.SetString("test", "ahhhh")
+	res, resErr := rpcClient2.CallMethod("idk", *params)
+	if resErr != nil {
+		fmt.Printf("%s\n", resErr.Message)
+		return
+	}
+
+	data := ""
+	err := json.Unmarshal(*res, &data)
+	if err != nil {
+		println(err.Error())
+		return
+	}
+	fmt.Printf("Response: `%s`\n", data)
 }
