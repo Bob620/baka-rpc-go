@@ -7,25 +7,36 @@ import (
 	"strings"
 )
 
+type Types string
+
+const (
+	ByName     Types = "byName"
+	ByPosition Types = "byPosition"
+)
+
 type Parameters struct {
-	paramType string
+	paramType Types
 	values    map[string]json.RawMessage
 }
 
-func newParameters(paramType string) *Parameters {
+func newParameters(paramType Types) *Parameters {
 	return &Parameters{paramType: paramType, values: make(map[string]json.RawMessage)}
 }
 
 func NewParametersByName() *Parameters {
-	return newParameters("byName")
+	return newParameters(ByName)
 }
 
 func NewParametersByPosition() *Parameters {
-	return newParameters("byPosition")
+	return newParameters(ByPosition)
+}
+
+func (params *Parameters) GetType() Types {
+	return params.paramType
 }
 
 func (params *Parameters) Set(key string, value json.RawMessage) (err error) {
-	if params.paramType == "byPosition" {
+	if params.paramType == ByPosition {
 		_, err = strconv.Atoi(key)
 		if err != nil {
 			return err
@@ -68,7 +79,7 @@ func (params *Parameters) GetInt(key string) (value int, err error) {
 }
 
 func (params *Parameters) Serialize() (data json.RawMessage, err error) {
-	if params.paramType == "byName" {
+	if params.paramType == ByName {
 		data, err = json.Marshal(params.values)
 	} else {
 		posMap := make(map[int]json.RawMessage)
@@ -113,6 +124,7 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 		for index, value := range data {
 			params.values[strconv.Itoa(index)] = value
 		}
+		params.paramType = ByPosition
 		break
 	case '{':
 		var data map[string]json.RawMessage
@@ -121,6 +133,7 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 		}
 
 		params.values = data
+		params.paramType = ByName
 		break
 	default:
 		err = errors.New("unable to parse parameters")

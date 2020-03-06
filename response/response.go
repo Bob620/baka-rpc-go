@@ -1,12 +1,20 @@
 package response
 
 import (
-	"baka-rpc-go/errors"
 	"encoding/json"
+
+	"baka-rpc-go/errors"
+)
+
+type Types string
+
+const (
+	SuccessType Types = "success"
+	ErrorType   Types = "error"
 )
 
 type Response struct {
-	responseType string
+	responseType Types
 	id           string
 	jsonRpc      string
 	result       *json.RawMessage
@@ -15,7 +23,7 @@ type Response struct {
 
 func NewSuccessResponse(id string, result json.RawMessage) *Response {
 	return &Response{
-		responseType: "success",
+		responseType: SuccessType,
 		id:           id,
 		jsonRpc:      "2.0",
 		result:       &result,
@@ -24,7 +32,7 @@ func NewSuccessResponse(id string, result json.RawMessage) *Response {
 
 func NewErrorResponse(id string, error *errors.RPCError) *Response {
 	return &Response{
-		responseType: "error",
+		responseType: ErrorType,
 		id:           id,
 		jsonRpc:      "2.0",
 		error:        error,
@@ -39,7 +47,7 @@ func (res *Response) GetId() string {
 	return res.id
 }
 
-func (res *Response) GetType() string {
+func (res *Response) GetType() Types {
 	return res.responseType
 }
 
