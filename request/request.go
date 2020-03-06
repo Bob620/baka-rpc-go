@@ -1,13 +1,22 @@
 package request
 
 import (
-	"baka-rpc-go/parameters"
 	"encoding/json"
+
 	"github.com/nu7hatch/gouuid"
+
+	"baka-rpc-go/parameters"
+)
+
+type Types string
+
+const (
+	RequestType      Types = "request"
+	NotificationType Types = "notification"
 )
 
 type Request struct {
-	requestType string
+	requestType Types
 	id          string
 	jsonRpc     string
 	method      string
@@ -16,7 +25,7 @@ type Request struct {
 
 func NewNotification(method string, params *parameters.Parameters) *Request {
 	return &Request{
-		requestType: "notification",
+		requestType: NotificationType,
 		jsonRpc:     "2.0",
 		method:      method,
 		params:      params,
@@ -30,12 +39,20 @@ func NewRequest(method, id string, params *parameters.Parameters) *Request {
 	}
 
 	return &Request{
-		requestType: "request",
+		requestType: RequestType,
 		id:          id,
 		jsonRpc:     "2.0",
 		method:      method,
 		params:      params,
 	}
+}
+
+func (req *Request) GetMethod() string {
+	return req.method
+}
+
+func (req *Request) GetParams() *parameters.Parameters {
+	return req.params
 }
 
 func (req *Request) GetRpcVersion() string {
@@ -64,7 +81,7 @@ func (req *Request) Serialize() (message json.RawMessage, err error) {
 	}
 
 	// Omitted if notification
-	if req.requestType != "notification" {
+	if req.requestType != NotificationType {
 		data["id"] = []byte(`"` + req.id + `"`)
 	}
 
@@ -80,7 +97,7 @@ func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 
 	// It's a notification until it gets an id
 	req.jsonRpc = ""
-	req.requestType = "notification"
+	req.requestType = NotificationType
 	err = json.Unmarshal(jsonData, &jsonReq)
 	if err != nil {
 		return err
@@ -96,7 +113,7 @@ func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 
 		if item != "" {
 			req.id = item
-			req.requestType = "request"
+			req.requestType = RequestType
 		}
 	}
 
@@ -112,7 +129,7 @@ func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 	err = json.Unmarshal(jsonReq["method"], &req.method)
 
 	// Don't set the rpc version if an error occurred
-	if err == nil {
+	if err != nil {
 		return
 	}
 	err = json.Unmarshal(jsonReq["jsonrpc"], &req.jsonRpc)
