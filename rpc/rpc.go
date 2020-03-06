@@ -72,9 +72,10 @@ func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
 	}
 
 	rpc := &bakaRpc{
-		chanIn:  chanIn,
-		chanOut: chanOut,
-		methods: map[string]*method{},
+		chanIn:        chanIn,
+		chanOut:       chanOut,
+		methods:       map[string]*method{},
+		callbackChans: map[string]*chan response.Response{},
 	}
 	rpc.start()
 
