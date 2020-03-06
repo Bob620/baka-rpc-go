@@ -87,12 +87,4 @@ func main() {
 
 			return json.Marshal(test.Default)
 		})
-
-	data, errData := rpcClient.CallLocalMethod("idk", map[string]rpc.MethodParam{"test": &rpc.StringParam{Name: "test", Default: "ahhhhh"}})
-	if errData != nil {
-		fmt.Println(errData.GetError())
-		return
-	}
-
-	fmt.Printf("%s\n", *data.GetResult())
 }
