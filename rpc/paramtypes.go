@@ -17,8 +17,8 @@ func (param *StringParam) Clone(message json.RawMessage) (MethodParam, error) {
 		return nil, errors.New("requires non-nil value")
 	}
 	clone := StringParam{Default: param.Default, Name: param.Name}
-	_ = clone.SetData(message)
-	return &clone, nil
+	err := clone.SetData(message)
+	return &clone, err
 }
 
 func (param *StringParam) GetName() string {
@@ -56,8 +56,8 @@ func (param *IntParam) Clone(message json.RawMessage) (MethodParam, error) {
 		return nil, errors.New("requires non-nil value")
 	}
 	clone := IntParam{Default: param.Default, Name: param.Name}
-	_ = clone.SetData(message)
-	return &clone, nil
+	err := clone.SetData(message)
+	return &clone, err
 }
 
 func (param *IntParam) GetName() string {
@@ -95,8 +95,8 @@ func (param *BoolParam) Clone(message json.RawMessage) (MethodParam, error) {
 		return nil, errors.New("requires non-nil value")
 	}
 	clone := BoolParam{Default: param.Default, Name: param.Name}
-	_ = clone.SetData(message)
-	return &clone, nil
+	err := clone.SetData(message)
+	return &clone, err
 }
 
 func (param *BoolParam) GetName() string {
@@ -134,8 +134,8 @@ func (param *float64Param) Clone(message json.RawMessage) (MethodParam, error) {
 		return nil, errors.New("requires non-nil value")
 	}
 	clone := float64Param{Default: param.Default, Name: param.Name}
-	_ = clone.SetData(message)
-	return &clone, nil
+	err := clone.SetData(message)
+	return &clone, err
 }
 
 func (param *float64Param) GetName() string {
