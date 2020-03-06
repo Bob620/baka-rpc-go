@@ -1,11 +1,28 @@
 package rpc
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+)
 
 type StringParam struct {
-	Name    string
-	Default string
-	data    json.RawMessage
+	Name         string
+	Default      string
+	NeedsDefault bool
+	data         json.RawMessage
+}
+
+func (param *StringParam) Clone(message json.RawMessage) (MethodParam, error) {
+	if param.NeedsDefault && message == nil {
+		return nil, errors.New("requires non-nil value")
+	}
+	clone := StringParam{Default: param.Default, Name: param.Name}
+	_ = clone.SetData(message)
+	return &clone, nil
+}
+
+func (param *StringParam) GetName() string {
+	return param.Name
 }
 
 func (param *StringParam) SetData(message json.RawMessage) (err error) {
@@ -15,6 +32,10 @@ func (param *StringParam) SetData(message json.RawMessage) (err error) {
 }
 
 func (param *StringParam) GetData() json.RawMessage {
+	if param.data == nil {
+		data, _ := json.Marshal(param.Default)
+		return data
+	}
 	return param.data
 }
 
@@ -24,9 +45,23 @@ func (param *StringParam) GetString() (value string, err error) {
 }
 
 type IntParam struct {
-	Name    string
-	Default int
-	data    json.RawMessage
+	Name         string
+	Default      int
+	NeedsDefault bool
+	data         json.RawMessage
+}
+
+func (param *IntParam) Clone(message json.RawMessage) (MethodParam, error) {
+	if param.NeedsDefault && message == nil {
+		return nil, errors.New("requires non-nil value")
+	}
+	clone := IntParam{Default: param.Default, Name: param.Name}
+	_ = clone.SetData(message)
+	return &clone, nil
+}
+
+func (param *IntParam) GetName() string {
+	return param.Name
 }
 
 func (param *IntParam) SetData(message json.RawMessage) (err error) {
@@ -36,6 +71,10 @@ func (param *IntParam) SetData(message json.RawMessage) (err error) {
 }
 
 func (param *IntParam) GetData() json.RawMessage {
+	if param.data == nil {
+		data, _ := json.Marshal(param.Default)
+		return data
+	}
 	return param.data
 }
 
@@ -45,9 +84,23 @@ func (param *IntParam) GetInt() (value int, err error) {
 }
 
 type BoolParam struct {
-	Name    string
-	Default bool
-	data    json.RawMessage
+	Name         string
+	Default      bool
+	NeedsDefault bool
+	data         json.RawMessage
+}
+
+func (param *BoolParam) Clone(message json.RawMessage) (MethodParam, error) {
+	if param.NeedsDefault && message == nil {
+		return nil, errors.New("requires non-nil value")
+	}
+	clone := BoolParam{Default: param.Default, Name: param.Name}
+	_ = clone.SetData(message)
+	return &clone, nil
+}
+
+func (param *BoolParam) GetName() string {
+	return param.Name
 }
 
 func (param *BoolParam) SetData(message json.RawMessage) (err error) {
@@ -57,6 +110,10 @@ func (param *BoolParam) SetData(message json.RawMessage) (err error) {
 }
 
 func (param *BoolParam) GetData() json.RawMessage {
+	if param.data == nil {
+		data, _ := json.Marshal(param.Default)
+		return data
+	}
 	return param.data
 }
 
@@ -66,9 +123,23 @@ func (param *BoolParam) GetBool() (value bool, err error) {
 }
 
 type float64Param struct {
-	Name    string
-	Default float64
-	data    json.RawMessage
+	Name         string
+	Default      float64
+	NeedsDefault bool
+	data         json.RawMessage
+}
+
+func (param *float64Param) Clone(message json.RawMessage) (MethodParam, error) {
+	if param.NeedsDefault && message == nil {
+		return nil, errors.New("requires non-nil value")
+	}
+	clone := float64Param{Default: param.Default, Name: param.Name}
+	_ = clone.SetData(message)
+	return &clone, nil
+}
+
+func (param *float64Param) GetName() string {
+	return param.Name
 }
 
 func (param *float64Param) SetData(message json.RawMessage) (err error) {
@@ -78,6 +149,10 @@ func (param *float64Param) SetData(message json.RawMessage) (err error) {
 }
 
 func (param *float64Param) GetData() json.RawMessage {
+	if param.data == nil {
+		data, _ := json.Marshal(param.Default)
+		return data
+	}
 	return param.data
 }
 
