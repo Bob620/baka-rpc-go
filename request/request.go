@@ -76,7 +76,7 @@ func (req *Request) Serialize() (message json.RawMessage, err error) {
 	data["method"] = []byte(`"` + req.method + `"`)
 
 	// May be omitted
-	if data["params"] != nil {
+	if params != nil {
 		data["params"] = params
 	}
 
@@ -119,7 +119,7 @@ func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 
 	// May be omitted
 	if jsonReq["params"] != nil {
-		err = json.Unmarshal(jsonReq["params"], req.params)
+		err = json.Unmarshal(jsonReq["params"], &req.params)
 		if err != nil {
 			return err
 		}

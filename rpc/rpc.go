@@ -90,17 +90,28 @@ func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage,
 
 	sanitizedParams := map[string]MethodParam{}
 	params := req.GetParams()
-	if params.GetType() == parameters.ByName {
-		for _, param := range method.params {
-			newParam, err := param.Clone(params.Get(param.GetName()))
-			if err != nil {
-				return nil, errors.NewInvalidParams()
+
+	if params != nil {
+		if params.GetType() == parameters.ByName {
+			for _, param := range method.params {
+				newParam, err := param.Clone(params.Get(param.GetName()))
+				if err != nil {
+					return nil, errors.NewInvalidParams()
+				}
+				sanitizedParams[param.GetName()] = newParam
 			}
-			sanitizedParams[param.GetName()] = newParam
+		} else {
+			for key, param := range method.params {
+				newParam, err := param.Clone(params.Get(strconv.Itoa(key)))
+				if err != nil {
+					return nil, errors.NewInvalidParams()
+				}
+				sanitizedParams[param.GetName()] = newParam
+			}
 		}
 	} else {
-		for key, param := range method.params {
-			newParam, err := param.Clone(params.Get(strconv.Itoa(key)))
+		for _, param := range method.params {
+			newParam, err := param.Clone(nil)
 			if err != nil {
 				return nil, errors.NewInvalidParams()
 			}
@@ -169,7 +180,7 @@ func (rpc *bakaRpc) start() {
 			if err != nil {
 				err = json.Unmarshal(message, &res)
 				if err != nil {
-					data, _ := json.Marshal(response.NewErrorResponse("", errors.NewParseError()))
+					data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewParseError()))
 					go rpc.sendMessage(data)
 				}
 			}

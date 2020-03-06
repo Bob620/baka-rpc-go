@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	errs "errors"
 
 	"baka-rpc-go/errors"
 )
@@ -119,9 +120,12 @@ func (res *Response) UnmarshalJSON(jsonData []byte) (err error) {
 
 	// Requires error or result but not both
 	if jsonReq["error"] != nil {
-		err = json.Unmarshal(jsonReq["error"], res.error)
+		err = json.Unmarshal(jsonReq["error"], &res.error)
 	} else if jsonReq["result"] != nil {
-		err = json.Unmarshal(jsonReq["result"], res.result)
+		res.responseType = SuccessType
+		err = json.Unmarshal(jsonReq["result"], &res.result)
+	} else {
+		return errs.New("no error or result")
 	}
 
 	// Don't set the rpc version if an error occurred
