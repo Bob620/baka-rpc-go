@@ -125,7 +125,7 @@ func (rpc *bakaRpc) handleResponse(res response.Response) {
 	return
 }
 
-func (rpc *bakaRpc) callMethod(methodName string, params parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
+func (rpc *bakaRpc) CallMethod(methodName string, params parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
 	method := request.NewRequest(methodName, "", &params)
 
 	data, err := json.Marshal(method)
@@ -149,7 +149,7 @@ func (rpc *bakaRpc) callMethod(methodName string, params parameters.Parameters) 
 	return
 }
 
-func (rpc *bakaRpc) notifyMethod(methodName string, params parameters.Parameters) {
+func (rpc *bakaRpc) NotifyMethod(methodName string, params parameters.Parameters) {
 	data, err := json.Marshal(request.NewNotification(methodName, &params))
 	if err == nil {
 		go rpc.sendMessage(data)
