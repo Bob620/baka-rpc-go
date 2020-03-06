@@ -1,21 +1,25 @@
 package rpc
 
 import (
-	"baka-rpc-go/errors"
-	"baka-rpc-go/request"
-	"baka-rpc-go/response"
 	"bufio"
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
+
+	"baka-rpc-go/errors"
+	"baka-rpc-go/parameters"
+	"baka-rpc-go/request"
+	"baka-rpc-go/response"
 )
 
 type MethodFunc func(params map[string]MethodParam) (returnMessage json.RawMessage, err error)
 
 type bakaRpc struct {
-	chanIn  <-chan []byte
-	chanOut chan<- []byte
-	methods map[string]*method
+	chanIn        <-chan []byte
+	chanOut       chan<- []byte
+	methods       map[string]*method
+	callbackChans map[string]*chan response.Response
 }
 
 type method struct {
@@ -25,6 +29,8 @@ type method struct {
 }
 
 type MethodParam interface {
+	Clone(json.RawMessage) (MethodParam, error)
+	GetName() string
 	SetData(json.RawMessage) error
 	GetData() json.RawMessage
 }
@@ -75,12 +81,79 @@ func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
 	return rpc
 }
 
-func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage, err error) {
+func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage, errRpc *errors.RPCError) {
+	method := rpc.methods[req.GetMethod()]
+	if method == nil {
+		return nil, errors.NewMethodNotFound()
+	}
+
+	sanitizedParams := map[string]MethodParam{}
+	params := req.GetParams()
+	if params.GetType() == parameters.ByName {
+		for _, param := range method.params {
+			newParam, err := param.Clone(params.Get(param.GetName()))
+			if err != nil {
+				return nil, errors.NewInvalidParams()
+			}
+			sanitizedParams[param.GetName()] = newParam
+		}
+	} else {
+		for key, param := range method.params {
+			newParam, err := param.Clone(params.Get(strconv.Itoa(key)))
+			if err != nil {
+				return nil, errors.NewInvalidParams()
+			}
+			sanitizedParams[param.GetName()] = newParam
+		}
+	}
+
+	data, err := (*method.methodFunc)(sanitizedParams)
+	if err != nil {
+		return nil, errors.NewGenericError("Method failed")
+	}
+
+	return data, nil
+}
+
+func (rpc *bakaRpc) handleResponse(res response.Response) {
+	callback := rpc.callbackChans[res.GetId()]
+
+	if callback != nil {
+		*callback <- res
+	}
+
 	return
 }
 
-func (rpc *bakaRpc) handleResponse(res response.Response) (message json.RawMessage, err error) {
+func (rpc *bakaRpc) callMethod(methodName string, params parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
+	method := request.NewRequest(methodName, "", &params)
+
+	data, err := json.Marshal(method)
+	if err != nil {
+		return nil, errors.NewParseError()
+	}
+
+	callback := make(chan response.Response)
+	rpc.callbackChans[method.GetId()] = &callback
+
+	go rpc.sendMessage(data)
+	remoteRes := <-callback
+	delete(rpc.callbackChans, method.GetId())
+
+	if remoteRes.GetType() == response.ErrorType {
+		resErr = remoteRes.GetError()
+	} else {
+		res = remoteRes.GetResult()
+	}
+
 	return
+}
+
+func (rpc *bakaRpc) notifyMethod(methodName string, params parameters.Parameters) {
+	data, err := json.Marshal(request.NewNotification(methodName, &params))
+	if err == nil {
+		go rpc.sendMessage(data)
+	}
 }
 
 func (rpc *bakaRpc) start() {
@@ -108,7 +181,7 @@ func (rpc *bakaRpc) start() {
 					go func() {
 						message, err := rpc.handleRequest(req)
 						if err != nil {
-							data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), errors.NewGenericError(err.Error())))
+							data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), err))
 							rpc.sendMessage(data)
 						} else {
 							data, _ := json.Marshal(response.NewSuccessResponse(req.GetId(), message))
@@ -123,16 +196,7 @@ func (rpc *bakaRpc) start() {
 					data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewInvalidRequest()))
 					go rpc.sendMessage(data)
 				} else {
-					go func() {
-						message, err := rpc.handleResponse(res)
-						if err != nil {
-							data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewGenericError(err.Error())))
-							rpc.sendMessage(data)
-						} else {
-							data, _ := json.Marshal(response.NewSuccessResponse(res.GetId(), message))
-							rpc.sendMessage(data)
-						}
-					}()
+					go rpc.handleResponse(res)
 				}
 			}
 		}
@@ -151,21 +215,6 @@ func (rpc *bakaRpc) RegisterMethod(methodName string, methodParams []MethodParam
 	}
 }
 
-func (rpc *bakaRpc) DeRegisterMethod(methodName string) {
+func (rpc *bakaRpc) DeregisterMethod(methodName string) {
 	delete(rpc.methods, methodName)
-}
-
-func (rpc *bakaRpc) CallLocalMethod(methodName string, methodParams map[string]MethodParam) (success *response.Response, error *response.Response) {
-	method := rpc.methods[methodName]
-	if method == nil {
-		return nil, response.NewErrorResponse("", errors.NewMethodNotFound())
-	}
-
-	returnMessage, err := (*method.methodFunc)(methodParams)
-
-	if err != nil {
-		return nil, response.NewErrorResponse("", errors.NewGenericError(err.Error()))
-	}
-
-	return response.NewSuccessResponse("", returnMessage), nil
 }
