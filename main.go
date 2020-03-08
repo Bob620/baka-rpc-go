@@ -33,10 +33,7 @@ func main() {
 	// Request one method
 	res, resErr := rpcClient2.CallMethod("idk",
 		parameters.NewParametersByPosition([]parameters.Param{
-			&parameters.StringParam{
-				Name:    "test",
-				Default: "ahhh",
-			},
+			&parameters.StringParam{Name: "test", Default: "ahhh"},
 		}))
 
 	// Handle method return
