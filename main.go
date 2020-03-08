@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"baka-rpc-go/parameters"
-	"baka-rpc-go/rpc"
+	"github.com/bob620/baka-rpc-go/parameters"
+	"github.com/bob620/baka-rpc-go/rpc"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	errs "errors"
 
-	"baka-rpc-go/errors"
+	"github.com/bob620/baka-rpc-go/errors"
 )
 
 type Types string

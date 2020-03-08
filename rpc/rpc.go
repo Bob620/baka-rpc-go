@@ -7,10 +7,10 @@ import (
 	"os"
 	"strconv"
 
-	"baka-rpc-go/errors"
-	"baka-rpc-go/parameters"
-	"baka-rpc-go/request"
-	"baka-rpc-go/response"
+	"github.com/bob620/baka-rpc-go/errors"
+	"github.com/bob620/baka-rpc-go/parameters"
+	"github.com/bob620/baka-rpc-go/request"
+	"github.com/bob620/baka-rpc-go/response"
 )
 
 type MethodFunc func(params map[string]MethodParam) (returnMessage json.RawMessage, err error)

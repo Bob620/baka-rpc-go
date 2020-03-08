@@ -5,7 +5,7 @@ import (
 
 	"github.com/nu7hatch/gouuid"
 
-	"baka-rpc-go/parameters"
+	"github.com/bob620/baka-rpc-go/parameters"
 )
 
 type Types string
