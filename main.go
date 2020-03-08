@@ -9,24 +9,37 @@ import (
 )
 
 func main() {
+	// Testing Overhead
 	chanOne := make(chan []byte)
 	chanTwo := make(chan []byte)
 
+	// Client One
 	rpcClient := rpc.CreateBakaRpc(chanOne, chanTwo)
-	rpcClient2 := rpc.CreateBakaRpc(chanTwo, chanOne)
+
+	// Register one method
 	rpcClient.RegisterMethod(
 		"idk",
-		[]rpc.MethodParam{
-			&rpc.StringParam{Name: "test"},
-		}, func(params map[string]rpc.MethodParam) (returnMessage json.RawMessage, err error) {
-			test, _ := params["test"].(*rpc.StringParam).GetString()
+		[]parameters.Param{
+			&parameters.StringParam{Name: "test"},
+		}, func(params map[string]parameters.Param) (returnMessage json.RawMessage, err error) {
+			test, _ := params["test"].(*parameters.StringParam).GetString()
 
 			return json.Marshal(test)
 		})
 
-	params := parameters.NewParametersByName()
-	params.SetString("test", "ahhhh")
-	res, resErr := rpcClient2.CallMethod("idk", *params)
+	// Client Two
+	rpcClient2 := rpc.CreateBakaRpc(chanTwo, chanOne)
+
+	// Request one method
+	res, resErr := rpcClient2.CallMethod("idk",
+		parameters.NewParametersByPosition([]parameters.Param{
+			&parameters.StringParam{
+				Name:    "test",
+				Default: "ahhh",
+			},
+		}))
+
+	// Handle method return
 	if resErr != nil {
 		fmt.Printf("%s\n", resErr.Message)
 		return
@@ -38,5 +51,6 @@ func main() {
 		println(err.Error())
 		return
 	}
+
 	fmt.Printf("Response: `%s`\n", data)
 }

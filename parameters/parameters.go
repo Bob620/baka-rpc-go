@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
-	"strings"
 )
 
 type Types string
@@ -16,26 +15,39 @@ const (
 
 type Parameters struct {
 	paramType Types
-	values    map[string]json.RawMessage
+	values    map[string]Param
 }
 
-func newParameters(paramType Types) *Parameters {
-	return &Parameters{paramType: paramType, values: make(map[string]json.RawMessage)}
+func newParameters(paramType Types, params []Param) *Parameters {
+	if params == nil {
+		return &Parameters{paramType: paramType, values: make(map[string]Param)}
+	}
+
+	values := make(map[string]Param)
+	for _, param := range params {
+		values[param.GetName()] = param
+	}
+
+	return &Parameters{paramType: paramType, values: values}
 }
 
-func NewParametersByName() *Parameters {
-	return newParameters(ByName)
+func NewParametersByName(params []Param) *Parameters {
+	return newParameters(ByName, params)
 }
 
-func NewParametersByPosition() *Parameters {
-	return newParameters(ByPosition)
+func NewParametersByPosition(params []Param) *Parameters {
+	for index, param := range params {
+		param.SetName(strconv.Itoa(index))
+	}
+
+	return newParameters(ByPosition, params)
 }
 
 func (params *Parameters) GetType() Types {
 	return params.paramType
 }
 
-func (params *Parameters) Set(key string, value json.RawMessage) (err error) {
+func (params *Parameters) Set(key string, value Param) (err error) {
 	if params.paramType == ByPosition {
 		_, err = strconv.Atoi(key)
 		if err != nil {
@@ -47,42 +59,15 @@ func (params *Parameters) Set(key string, value json.RawMessage) (err error) {
 	return nil
 }
 
-func (params *Parameters) SetString(key, value string) error {
-	return params.Set(key, []byte(`"`+strings.ReplaceAll(value, "\"", "\\\"")+`"`))
-}
-
-func (params *Parameters) SetFloat(key string, value float64) error {
-	return params.Set(key, []byte(strconv.FormatFloat(value, 'f', -1, 64)))
-}
-
-func (params *Parameters) SetInt(key string, value int) error {
-	return params.Set(key, []byte(strconv.Itoa(value)))
-}
-
-func (params *Parameters) Get(key string) json.RawMessage {
+func (params *Parameters) Get(key string) Param {
 	return params.values[key]
-}
-
-func (params *Parameters) GetString(key string) (value string, err error) {
-	err = json.Unmarshal(params.Get(key), &value)
-	return
-}
-
-func (params *Parameters) GetFloat(key string) (value float64, err error) {
-	err = json.Unmarshal(params.Get(key), &value)
-	return
-}
-
-func (params *Parameters) GetInt(key string) (value int, err error) {
-	err = json.Unmarshal(params.Get(key), &value)
-	return
 }
 
 func (params *Parameters) Serialize() (data json.RawMessage, err error) {
 	if params.paramType == ByName {
 		data, err = json.Marshal(params.values)
 	} else {
-		posMap := make(map[int]json.RawMessage)
+		posMap := make(map[int]Param)
 		largestIndex := 0
 		for key, value := range params.values {
 			pos, err := strconv.Atoi(key)
@@ -95,7 +80,7 @@ func (params *Parameters) Serialize() (data json.RawMessage, err error) {
 			posMap[pos] = value
 		}
 
-		rawData := make([]json.RawMessage, largestIndex+1)
+		rawData := make([]Param, largestIndex+1)
 		for key, value := range posMap {
 			rawData[key] = value
 		}
@@ -121,8 +106,10 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 			break
 		}
 
+		params.values = make(map[string]Param)
 		for index, value := range data {
-			params.values[strconv.Itoa(index)] = value
+			pos := strconv.Itoa(index)
+			params.values[pos] = &GenericParam{pos, value, false, value}
 		}
 		params.paramType = ByPosition
 		break
@@ -132,7 +119,11 @@ func (params *Parameters) UnmarshalJSON(jsonData []byte) (err error) {
 			break
 		}
 
-		params.values = data
+		params.values = make(map[string]Param)
+		for key, value := range data {
+			params.values[key] = &GenericParam{key, value, false, value}
+		}
+
 		params.paramType = ByName
 		break
 	default:
