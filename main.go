@@ -22,7 +22,7 @@ func main() {
 	rpcClient.RegisterMethod(
 		"idk",
 		[]parameters.Param{
-			&parameters.StringParam{Name: "test"},
+			&parameters.StringParam{Name: "test", IsRequired: true},
 		}, func(params map[string]parameters.Param) (returnMessage json.RawMessage, err error) {
 			test, _ := params["test"].(*parameters.StringParam).GetString()
 
