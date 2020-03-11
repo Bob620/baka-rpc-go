@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
-	"os"
 	"strconv"
+
+	"github.com/gorilla/websocket"
+	UUID "github.com/nu7hatch/gouuid"
 
 	"github.com/bob620/baka-rpc-go/errors"
 	"github.com/bob620/baka-rpc-go/parameters"
@@ -16,8 +18,8 @@ import (
 type MethodFunc func(params map[string]parameters.Param) (returnMessage json.RawMessage, err error)
 
 type bakaRpc struct {
-	chanIn        <-chan []byte
-	chanOut       chan<- []byte
+	chansIn       map[*UUID.UUID]<-chan []byte
+	chansOut      map[*UUID.UUID]chan<- []byte
 	methods       map[string]*method
 	callbackChans map[string]*chan response.Response
 }
@@ -55,24 +57,79 @@ func MakeWriterChan(r io.Writer) chan<- []byte {
 	return data
 }
 
+func MakeSocketReaderChan(conn *websocket.Conn) (readerChan chan []byte) {
+	readerChan = make(chan []byte)
+	go func() {
+		evacuate := false
+		for !evacuate {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				evacuate = true
+			}
+			readerChan <- message
+		}
+	}()
+
+	return
+}
+
+func MakeSocketWriterChan(conn *websocket.Conn) (writerChan chan []byte) {
+	writerChan = make(chan []byte)
+	go func() {
+		evacuate := false
+		for !evacuate {
+			err := conn.WriteMessage(websocket.TextMessage, <-writerChan)
+			if err != nil {
+				evacuate = true
+			}
+		}
+	}()
+
+	return
+}
+
 func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
-	if chanIn == nil {
-		chanIn = MakeReaderChan(os.Stdin)
-	}
-
-	if chanOut == nil {
-		chanOut = MakeWriterChan(os.Stdout)
-	}
-
 	rpc := &bakaRpc{
-		chanIn:        chanIn,
-		chanOut:       chanOut,
+		chansIn:       map[*UUID.UUID]<-chan []byte{},
+		chansOut:      map[*UUID.UUID]chan<- []byte{},
 		methods:       map[string]*method{},
 		callbackChans: map[string]*chan response.Response{},
 	}
-	rpc.start()
+	if chanIn != nil && chanOut != nil {
+		rpc.AddChannels(chanIn, chanOut)
+	}
 
 	return rpc
+}
+
+func (rpc *bakaRpc) AddChannels(chanIn <-chan []byte, chanOut chan<- []byte) (uuid *UUID.UUID) {
+	uuid, _ = UUID.NewV4()
+
+	rpc.chansIn[uuid] = chanIn
+	rpc.chansOut[uuid] = chanOut
+
+	go rpc.start(uuid)
+
+	return
+}
+
+func (rpc *bakaRpc) UseChannels(chanIn <-chan []byte, chanOut chan<- []byte) {
+	uuid, _ := UUID.NewV4()
+
+	rpc.chansIn[uuid] = chanIn
+	rpc.chansOut[uuid] = chanOut
+
+	rpc.start(uuid)
+	rpc.RemoveChannels(uuid)
+
+	return
+}
+
+func (rpc *bakaRpc) RemoveChannels(uuid *UUID.UUID) {
+	if uuid != nil {
+		delete(rpc.chansIn, uuid)
+		delete(rpc.chansOut, uuid)
+	}
 }
 
 func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage, errRpc *errors.RPCError) {
@@ -138,7 +195,7 @@ func (rpc *bakaRpc) handleResponse(res response.Response) {
 	return
 }
 
-func (rpc *bakaRpc) CallMethod(methodName string, params *parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
+func (rpc *bakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params *parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
 	method := request.NewRequest(methodName, "", params)
 
 	data, err := json.Marshal(method)
@@ -149,75 +206,88 @@ func (rpc *bakaRpc) CallMethod(methodName string, params *parameters.Parameters)
 	callback := make(chan response.Response)
 	rpc.callbackChans[method.GetId()] = &callback
 
-	go rpc.sendMessage(data)
-	remoteRes := <-callback
-	delete(rpc.callbackChans, method.GetId())
-
-	if remoteRes.GetType() == response.ErrorType {
-		resErr = remoteRes.GetError()
-	} else {
-		res = remoteRes.GetResult()
+	if channelUuid == nil {
+		for uuid, _ := range rpc.chansOut {
+			channelUuid = uuid
+			break
+		}
 	}
 
-	return
+	if channelUuid != nil {
+		go rpc.sendMessage(data, channelUuid)
+		remoteRes := <-callback
+		delete(rpc.callbackChans, method.GetId())
+
+		if remoteRes.GetType() == response.ErrorType {
+			resErr = remoteRes.GetError()
+		} else {
+			res = remoteRes.GetResult()
+		}
+	}
+	return nil, errors.NewGenericError("Channel Closed")
 }
 
-func (rpc *bakaRpc) NotifyMethod(methodName string, params parameters.Parameters) {
+func (rpc *bakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, params parameters.Parameters) {
+	if channelUuid == nil {
+		for uuid, _ := range rpc.chansOut {
+			channelUuid = uuid
+			break
+		}
+	}
+
 	data, err := json.Marshal(request.NewNotification(methodName, &params))
-	if err == nil {
-		go rpc.sendMessage(data)
+	if err == nil && channelUuid != nil {
+		go rpc.sendMessage(data, channelUuid)
 	}
 }
 
-func (rpc *bakaRpc) start() {
-	go func() {
-		res := response.Response{}
-		req := request.Request{}
+func (rpc *bakaRpc) start(uuid *UUID.UUID) {
+	res := response.Response{}
+	req := request.Request{}
 
-		for {
-			message := <-rpc.chanIn
+	for rpc.chansIn[uuid] != nil {
+		message := <-rpc.chansIn[uuid]
 
-			err := json.Unmarshal(message, &req)
+		err := json.Unmarshal(message, &req)
+		if err != nil {
+			err = json.Unmarshal(message, &res)
 			if err != nil {
-				err = json.Unmarshal(message, &res)
-				if err != nil {
-					data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewParseError()))
-					go rpc.sendMessage(data)
-				}
-			}
-
-			if req.GetRpcVersion() != "" {
-				if req.GetRpcVersion() != "2.0" {
-					data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), errors.NewInvalidRequest()))
-					go rpc.sendMessage(data)
-				} else {
-					go func() {
-						message, err := rpc.handleRequest(req)
-						if err != nil {
-							data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), err))
-							rpc.sendMessage(data)
-						} else {
-							data, _ := json.Marshal(response.NewSuccessResponse(req.GetId(), message))
-							rpc.sendMessage(data)
-						}
-					}()
-				}
-			}
-
-			if res.GetRpcVersion() != "" {
-				if res.GetRpcVersion() != "2.0" {
-					data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewInvalidRequest()))
-					go rpc.sendMessage(data)
-				} else {
-					go rpc.handleResponse(res)
-				}
+				data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewParseError()))
+				go rpc.sendMessage(data, uuid)
 			}
 		}
-	}()
+
+		if req.GetRpcVersion() != "" {
+			if req.GetRpcVersion() != "2.0" {
+				data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), errors.NewInvalidRequest()))
+				go rpc.sendMessage(data, uuid)
+			} else {
+				go func() {
+					message, err := rpc.handleRequest(req)
+					if err != nil {
+						data, _ := json.Marshal(response.NewErrorResponse(req.GetId(), err))
+						rpc.sendMessage(data, uuid)
+					} else {
+						data, _ := json.Marshal(response.NewSuccessResponse(req.GetId(), message))
+						rpc.sendMessage(data, uuid)
+					}
+				}()
+			}
+		}
+
+		if res.GetRpcVersion() != "" {
+			if res.GetRpcVersion() != "2.0" {
+				data, _ := json.Marshal(response.NewErrorResponse(res.GetId(), errors.NewInvalidRequest()))
+				go rpc.sendMessage(data, uuid)
+			} else {
+				go rpc.handleResponse(res)
+			}
+		}
+	}
 }
 
-func (rpc *bakaRpc) sendMessage(message json.RawMessage) {
-	rpc.chanOut <- message
+func (rpc *bakaRpc) sendMessage(message json.RawMessage, uuid *UUID.UUID) {
+	rpc.chansOut[uuid] <- message
 }
 
 func (rpc *bakaRpc) RegisterMethod(methodName string, methodParams []parameters.Param, methodFunc MethodFunc) {
