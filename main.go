@@ -2,19 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/bob620/baka-rpc-go/parameters"
 	"github.com/bob620/baka-rpc-go/rpc"
 )
 
-func main() {
-	// Testing Overhead
-	chanOne := make(chan []byte)
-	chanTwo := make(chan []byte)
+// Testing Overhead
+var upgrader = websocket.Upgrader{} // use default options
 
+func main() {
 	// Client One
-	rpcClient := rpc.CreateBakaRpc(chanOne, chanTwo)
+	rpcClient := rpc.CreateBakaRpc(nil, nil)
 
 	// Register one method
 	rpcClient.RegisterMethod(
@@ -27,27 +29,15 @@ func main() {
 			return json.Marshal(test)
 		})
 
-	// Client Two
-	rpcClient2 := rpc.CreateBakaRpc(chanTwo, chanOne)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		rpcClient.UseChannels(rpc.MakeSocketReaderChan(c), rpc.MakeSocketWriterChan(c))
+	})
 
-	// Request one method
-	res, resErr := rpcClient2.CallMethod("idk",
-		parameters.NewParametersByPosition([]parameters.Param{
-			&parameters.StringParam{Name: "test", Default: "ahhh"},
-		}))
-
-	// Handle method return
-	if resErr != nil {
-		fmt.Printf("%s\n", resErr.Message)
-		return
-	}
-
-	data := ""
-	err := json.Unmarshal(*res, &data)
-	if err != nil {
-		println(err.Error())
-		return
-	}
-
-	fmt.Printf("Response: `%s`\n", data)
+	http.ListenAndServe("localhost:9889", nil)
 }
