@@ -16,14 +16,14 @@ type Param interface {
 }
 
 type GenericParam struct {
-	Name         string
-	Default      json.RawMessage
-	NeedsDefault bool
-	data         json.RawMessage
+	Name       string
+	Default    json.RawMessage
+	IsRequired bool
+	data       json.RawMessage
 }
 
 func (param *GenericParam) Clone(data json.RawMessage) (Param, error) {
-	clone := GenericParam{param.Name, param.Default, param.NeedsDefault, param.data}
+	clone := GenericParam{param.Name, param.Default, param.IsRequired, param.data}
 	if data != nil {
 		err := clone.SetData(data)
 		if err != nil {
@@ -31,7 +31,7 @@ func (param *GenericParam) Clone(data json.RawMessage) (Param, error) {
 		}
 	}
 
-	if data == nil && param.NeedsDefault {
+	if data == nil && param.IsRequired {
 		return nil, errors.New("value needed")
 	}
 	return &clone, nil
@@ -68,14 +68,14 @@ func (param *GenericParam) UnmarshalJSON(jsonData []byte) (err error) {
 }
 
 type StringParam struct {
-	Name         string
-	Default      string
-	NeedsDefault bool
-	data         json.RawMessage
+	Name       string
+	Default    string
+	IsRequired bool
+	data       json.RawMessage
 }
 
 func (param *StringParam) Clone(data json.RawMessage) (Param, error) {
-	clone := StringParam{param.Name, param.Default, param.NeedsDefault, param.data}
+	clone := StringParam{param.Name, param.Default, param.IsRequired, param.data}
 	if data != nil {
 		err := clone.SetData(data)
 		if err != nil {
@@ -83,7 +83,7 @@ func (param *StringParam) Clone(data json.RawMessage) (Param, error) {
 		}
 	}
 
-	if data == nil && param.NeedsDefault {
+	if data == nil && param.IsRequired {
 		return nil, errors.New("value needed")
 	}
 	return &clone, nil
@@ -134,14 +134,14 @@ func (param *StringParam) UnmarshalJSON(jsonData []byte) (err error) {
 }
 
 type IntParam struct {
-	Name         string
-	Default      int
-	NeedsDefault bool
-	data         json.RawMessage
+	Name       string
+	Default    int
+	IsRequired bool
+	data       json.RawMessage
 }
 
 func (param *IntParam) Clone(data json.RawMessage) (Param, error) {
-	clone := IntParam{param.Name, param.Default, param.NeedsDefault, param.data}
+	clone := IntParam{param.Name, param.Default, param.IsRequired, param.data}
 	if data != nil {
 		err := clone.SetData(data)
 		if err != nil {
@@ -149,7 +149,7 @@ func (param *IntParam) Clone(data json.RawMessage) (Param, error) {
 		}
 	}
 
-	if data == nil && param.NeedsDefault {
+	if data == nil && param.IsRequired {
 		return nil, errors.New("value needed")
 	}
 	return &clone, nil
@@ -200,14 +200,14 @@ func (param *IntParam) UnmarshalJSON(jsonData []byte) (err error) {
 }
 
 type BoolParam struct {
-	Name         string
-	Default      bool
-	NeedsDefault bool
-	data         json.RawMessage
+	Name       string
+	Default    bool
+	IsRequired bool
+	data       json.RawMessage
 }
 
 func (param *BoolParam) Clone(data json.RawMessage) (Param, error) {
-	clone := BoolParam{param.Name, param.Default, param.NeedsDefault, param.data}
+	clone := BoolParam{param.Name, param.Default, param.IsRequired, param.data}
 	if data != nil {
 		err := clone.SetData(data)
 		if err != nil {
@@ -215,7 +215,7 @@ func (param *BoolParam) Clone(data json.RawMessage) (Param, error) {
 		}
 	}
 
-	if data == nil && param.NeedsDefault {
+	if data == nil && param.IsRequired {
 		return nil, errors.New("value needed")
 	}
 	return &clone, nil
@@ -266,14 +266,14 @@ func (param *BoolParam) UnmarshalJSON(jsonData []byte) (err error) {
 }
 
 type float64Param struct {
-	Name         string
-	Default      float64
-	NeedsDefault bool
-	data         json.RawMessage
+	Name       string
+	Default    float64
+	IsRequired bool
+	data       json.RawMessage
 }
 
 func (param *float64Param) Clone(data json.RawMessage) (Param, error) {
-	clone := float64Param{param.Name, param.Default, param.NeedsDefault, param.data}
+	clone := float64Param{param.Name, param.Default, param.IsRequired, param.data}
 	if data != nil {
 		err := clone.SetData(data)
 		if err != nil {
@@ -281,7 +281,7 @@ func (param *float64Param) Clone(data json.RawMessage) (Param, error) {
 		}
 	}
 
-	if data == nil && param.NeedsDefault {
+	if data == nil && param.IsRequired {
 		return nil, errors.New("value needed")
 	}
 	return &clone, nil
