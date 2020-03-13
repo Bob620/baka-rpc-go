@@ -17,7 +17,7 @@ import (
 
 type MethodFunc func(params map[string]parameters.Param) (returnMessage json.RawMessage, err error)
 
-type bakaRpc struct {
+type BakaRpc struct {
 	chansIn       map[*UUID.UUID]<-chan []byte
 	chansOut      map[*UUID.UUID]chan<- []byte
 	methods       map[string]*method
@@ -88,8 +88,8 @@ func MakeSocketWriterChan(conn *websocket.Conn) (writerChan chan []byte) {
 	return
 }
 
-func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
-	rpc := &bakaRpc{
+func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *BakaRpc {
+	rpc := &BakaRpc{
 		chansIn:       map[*UUID.UUID]<-chan []byte{},
 		chansOut:      map[*UUID.UUID]chan<- []byte{},
 		methods:       map[string]*method{},
@@ -102,7 +102,7 @@ func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *bakaRpc {
 	return rpc
 }
 
-func (rpc *bakaRpc) AddChannels(chanIn <-chan []byte, chanOut chan<- []byte) (uuid *UUID.UUID) {
+func (rpc *BakaRpc) AddChannels(chanIn <-chan []byte, chanOut chan<- []byte) (uuid *UUID.UUID) {
 	uuid, _ = UUID.NewV4()
 
 	rpc.chansIn[uuid] = chanIn
@@ -113,7 +113,7 @@ func (rpc *bakaRpc) AddChannels(chanIn <-chan []byte, chanOut chan<- []byte) (uu
 	return
 }
 
-func (rpc *bakaRpc) UseChannels(chanIn <-chan []byte, chanOut chan<- []byte) {
+func (rpc *BakaRpc) UseChannels(chanIn <-chan []byte, chanOut chan<- []byte) {
 	uuid, _ := UUID.NewV4()
 
 	rpc.chansIn[uuid] = chanIn
@@ -125,14 +125,14 @@ func (rpc *bakaRpc) UseChannels(chanIn <-chan []byte, chanOut chan<- []byte) {
 	return
 }
 
-func (rpc *bakaRpc) RemoveChannels(uuid *UUID.UUID) {
+func (rpc *BakaRpc) RemoveChannels(uuid *UUID.UUID) {
 	if uuid != nil {
 		delete(rpc.chansIn, uuid)
 		delete(rpc.chansOut, uuid)
 	}
 }
 
-func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage, errRpc *errors.RPCError) {
+func (rpc *BakaRpc) handleRequest(req request.Request) (message json.RawMessage, errRpc *errors.RPCError) {
 	method := rpc.methods[req.GetMethod()]
 	if method == nil {
 		return nil, errors.NewMethodNotFound()
@@ -185,7 +185,7 @@ func (rpc *bakaRpc) handleRequest(req request.Request) (message json.RawMessage,
 	return data, nil
 }
 
-func (rpc *bakaRpc) handleResponse(res response.Response) {
+func (rpc *BakaRpc) handleResponse(res response.Response) {
 	callback := rpc.callbackChans[res.GetId()]
 
 	if callback != nil {
@@ -195,7 +195,7 @@ func (rpc *bakaRpc) handleResponse(res response.Response) {
 	return
 }
 
-func (rpc *bakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params *parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
+func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params *parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
 	method := request.NewRequest(methodName, "", params)
 
 	data, err := json.Marshal(method)
@@ -227,7 +227,7 @@ func (rpc *bakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params
 	return nil, errors.NewGenericError("Channel Closed")
 }
 
-func (rpc *bakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, params parameters.Parameters) {
+func (rpc *BakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, params parameters.Parameters) {
 	if channelUuid == nil {
 		for uuid, _ := range rpc.chansOut {
 			channelUuid = uuid
@@ -241,7 +241,7 @@ func (rpc *bakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, para
 	}
 }
 
-func (rpc *bakaRpc) start(uuid *UUID.UUID) {
+func (rpc *BakaRpc) start(uuid *UUID.UUID) {
 	res := response.Response{}
 	req := request.Request{}
 
@@ -286,11 +286,11 @@ func (rpc *bakaRpc) start(uuid *UUID.UUID) {
 	}
 }
 
-func (rpc *bakaRpc) sendMessage(message json.RawMessage, uuid *UUID.UUID) {
+func (rpc *BakaRpc) sendMessage(message json.RawMessage, uuid *UUID.UUID) {
 	rpc.chansOut[uuid] <- message
 }
 
-func (rpc *bakaRpc) RegisterMethod(methodName string, methodParams []parameters.Param, methodFunc MethodFunc) {
+func (rpc *BakaRpc) RegisterMethod(methodName string, methodParams []parameters.Param, methodFunc MethodFunc) {
 	rpc.methods[methodName] = &method{
 		name:       methodName,
 		params:     methodParams,
@@ -298,6 +298,6 @@ func (rpc *bakaRpc) RegisterMethod(methodName string, methodParams []parameters.
 	}
 }
 
-func (rpc *bakaRpc) DeregisterMethod(methodName string) {
+func (rpc *BakaRpc) DeregisterMethod(methodName string) {
 	delete(rpc.methods, methodName)
 }
