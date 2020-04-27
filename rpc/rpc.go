@@ -220,8 +220,10 @@ func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params
 
 		if remoteRes.GetType() == response.ErrorType {
 			resErr = remoteRes.GetError()
+			return nil, resErr
 		} else {
 			res = remoteRes.GetResult()
+			return res, nil
 		}
 	}
 	return nil, errors.NewGenericError("Channel Closed")
