@@ -68,6 +68,7 @@ func MakeSocketReaderChan(conn *websocket.Conn) (readerChan chan []byte) {
 			}
 			readerChan <- message
 		}
+		readerChan <- nil
 	}()
 
 	return
@@ -78,7 +79,12 @@ func MakeSocketWriterChan(conn *websocket.Conn) (writerChan chan []byte) {
 	go func() {
 		evacuate := false
 		for !evacuate {
-			err := conn.WriteMessage(websocket.TextMessage, <-writerChan)
+			data := <-writerChan
+			if data == nil {
+				evacuate = true
+			}
+
+			err := conn.WriteMessage(websocket.TextMessage, data)
 			if err != nil {
 				evacuate = true
 			}
@@ -252,6 +258,12 @@ func (rpc *BakaRpc) start(uuid *UUID.UUID) {
 
 	for rpc.chansIn[uuid] != nil {
 		message := <-rpc.chansIn[uuid]
+
+		if message == nil {
+			rpc.sendMessage(nil, uuid)
+			rpc.RemoveChannels(uuid)
+			break
+		}
 
 		err := json.Unmarshal(message, &req)
 		if err != nil {
