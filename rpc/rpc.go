@@ -129,6 +129,9 @@ func (rpc *BakaRpc) RemoveChannels(uuid *UUID.UUID) {
 	if uuid != nil {
 		delete(rpc.chansIn, uuid)
 		delete(rpc.chansOut, uuid)
+	} else {
+		rpc.chansIn = map[*UUID.UUID]<-chan []byte{}
+		rpc.chansOut = map[*UUID.UUID]chan<- []byte{}
 	}
 }
 
