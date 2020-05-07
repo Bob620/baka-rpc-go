@@ -18,10 +18,11 @@ import (
 type MethodFunc func(params map[string]parameters.Param) (returnMessage json.RawMessage, err error)
 
 type BakaRpc struct {
-	chansIn       map[*UUID.UUID]<-chan []byte
-	chansOut      map[*UUID.UUID]chan<- []byte
-	methods       map[string]*method
-	callbackChans map[string]*chan response.Response
+	chansIn          map[*UUID.UUID]<-chan []byte
+	chansOut         map[*UUID.UUID]chan<- []byte
+	methods          map[string]*method
+	callbackChans    map[string]*chan response.Response
+	disconnectHandle func(uuid *UUID.UUID)
 }
 
 type method struct {
@@ -69,6 +70,7 @@ func MakeSocketReaderChan(conn *websocket.Conn) (readerChan chan []byte) {
 			readerChan <- message
 		}
 		readerChan <- nil
+		_ = conn.Close()
 	}()
 
 	return
@@ -89,6 +91,7 @@ func MakeSocketWriterChan(conn *websocket.Conn) (writerChan chan []byte) {
 				evacuate = true
 			}
 		}
+		_ = conn.Close()
 	}()
 
 	return
@@ -101,11 +104,16 @@ func CreateBakaRpc(chanIn <-chan []byte, chanOut chan<- []byte) *BakaRpc {
 		methods:       map[string]*method{},
 		callbackChans: map[string]*chan response.Response{},
 	}
+
 	if chanIn != nil && chanOut != nil {
 		rpc.AddChannels(chanIn, chanOut)
 	}
 
 	return rpc
+}
+
+func (rpc *BakaRpc) HandleDisconnect(handle func(uuid *UUID.UUID)) {
+	rpc.disconnectHandle = handle
 }
 
 func (rpc *BakaRpc) AddChannels(chanIn <-chan []byte, chanOut chan<- []byte) (uuid *UUID.UUID) {
@@ -262,6 +270,7 @@ func (rpc *BakaRpc) start(uuid *UUID.UUID) {
 		if message == nil {
 			rpc.sendMessage(nil, uuid)
 			rpc.RemoveChannels(uuid)
+			rpc.disconnectHandle(uuid)
 			break
 		}
 
