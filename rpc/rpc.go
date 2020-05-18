@@ -278,7 +278,9 @@ func (rpc *BakaRpc) start(uuid *UUID.UUID) {
 		if message == nil {
 			rpc.sendMessage(nil, uuid)
 			rpc.RemoveChannels(uuid)
-			rpc.disconnectHandle(uuid)
+			if rpc.disconnectHandle != nil {
+				rpc.disconnectHandle(uuid)
+			}
 			break
 		}
 
