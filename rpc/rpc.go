@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	UUID "github.com/nu7hatch/gouuid"
@@ -22,6 +23,7 @@ type BakaRpc struct {
 	chansOut         map[*UUID.UUID]chan<- []byte
 	methods          map[string]*method
 	callbackChans    map[string]*chan response.Response
+	callbackMutex    sync.RWMutex
 	disconnectHandle func(uuid *UUID.UUID)
 }
 
@@ -203,7 +205,9 @@ func (rpc *BakaRpc) handleRequest(req request.Request) (message json.RawMessage,
 }
 
 func (rpc *BakaRpc) handleResponse(res response.Response) {
+	rpc.callbackMutex.RLock()
 	callback := rpc.callbackChans[res.GetId()]
+	rpc.callbackMutex.RUnlock()
 
 	if callback != nil {
 		*callback <- res
@@ -221,7 +225,9 @@ func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params
 	}
 
 	callback := make(chan response.Response)
+	rpc.callbackMutex.Lock()
 	rpc.callbackChans[method.GetId()] = &callback
+	rpc.callbackMutex.Unlock()
 
 	if channelUuid == nil {
 		for uuid, _ := range rpc.chansOut {
@@ -233,7 +239,9 @@ func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params
 	if channelUuid != nil {
 		go rpc.sendMessage(data, channelUuid)
 		remoteRes := <-callback
+		rpc.callbackMutex.Lock()
 		delete(rpc.callbackChans, method.GetId())
+		rpc.callbackMutex.Unlock()
 
 		if remoteRes.GetType() == response.ErrorType {
 			resErr = remoteRes.GetError()
