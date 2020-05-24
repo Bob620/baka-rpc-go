@@ -216,6 +216,18 @@ func (rpc *BakaRpc) handleResponse(res response.Response) {
 	return
 }
 
+func (rpc *BakaRpc) CallMethodByName(channelUuid *UUID.UUID, methodName string, params ...parameters.Param) (res *json.RawMessage, resErr *errors.RPCError) {
+	return rpc.CallMethod(channelUuid, methodName, parameters.NewParametersByName(params))
+}
+
+func (rpc *BakaRpc) CallMethodByPosition(channelUuid *UUID.UUID, methodName string, params ...parameters.Param) (res *json.RawMessage, resErr *errors.RPCError) {
+	return rpc.CallMethod(channelUuid, methodName, parameters.NewParametersByPosition(params))
+}
+
+func (rpc *BakaRpc) CallMethodWithNone(channelUuid *UUID.UUID, methodName string) (res *json.RawMessage, resErr *errors.RPCError) {
+	return rpc.CallMethod(channelUuid, methodName, &parameters.Parameters{})
+}
+
 func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params *parameters.Parameters) (res *json.RawMessage, resErr *errors.RPCError) {
 	method := request.NewRequest(methodName, "", params)
 
@@ -254,7 +266,19 @@ func (rpc *BakaRpc) CallMethod(channelUuid *UUID.UUID, methodName string, params
 	return nil, errors.NewGenericError("Channel Closed")
 }
 
-func (rpc *BakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, params parameters.Parameters) {
+func (rpc *BakaRpc) NotifyMethodByName(channelUuid *UUID.UUID, methodName string, params ...parameters.Param) {
+	rpc.NotifyMethod(channelUuid, methodName, parameters.NewParametersByName(params))
+}
+
+func (rpc *BakaRpc) NotifyMethodByPosition(channelUuid *UUID.UUID, methodName string, params ...parameters.Param) {
+	rpc.NotifyMethod(channelUuid, methodName, parameters.NewParametersByPosition(params))
+}
+
+func (rpc *BakaRpc) NotifyMethodWithNone(channelUuid *UUID.UUID, methodName string) {
+	rpc.NotifyMethod(channelUuid, methodName, &parameters.Parameters{})
+}
+
+func (rpc *BakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, params *parameters.Parameters) {
 	if channelUuid == nil {
 		for uuid, _ := range rpc.chansOut {
 			channelUuid = uuid
@@ -262,7 +286,7 @@ func (rpc *BakaRpc) NotifyMethod(channelUuid *UUID.UUID, methodName string, para
 		}
 	}
 
-	data, err := json.Marshal(request.NewNotification(methodName, &params))
+	data, err := json.Marshal(request.NewNotification(methodName, params))
 	if err == nil && channelUuid != nil {
 		go rpc.sendMessage(data, channelUuid)
 	}
