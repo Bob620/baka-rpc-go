@@ -43,6 +43,10 @@ func NewParametersByPosition(params []Param) *Parameters {
 	return newParameters(ByPosition, params)
 }
 
+func (params *Parameters) Length() int {
+	return len(params.values)
+}
+
 func (params *Parameters) GetType() Types {
 	return params.paramType
 }
