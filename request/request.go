@@ -24,6 +24,10 @@ type Request struct {
 }
 
 func NewNotification(method string, params *parameters.Parameters) *Request {
+	if params == nil {
+		params = parameters.NewParametersByName(nil)
+	}
+
 	return &Request{
 		requestType: NotificationType,
 		jsonRpc:     "2.0",
@@ -36,6 +40,10 @@ func NewRequest(method, id string, params *parameters.Parameters) *Request {
 	if len(id) == 0 {
 		uid, _ := uuid.NewV4()
 		id = uid.String()
+	}
+
+	if params == nil {
+		params = parameters.NewParametersByName(nil)
 	}
 
 	return &Request{
