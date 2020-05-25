@@ -209,7 +209,7 @@ func (rpc *BakaRpc) handleRequest(req request.Request) (message json.RawMessage,
 
 	data, err := (*method.methodFunc)(sanitizedParams)
 	if err != nil {
-		return nil, errors.NewGenericError("Method failed")
+		return nil, errors.NewGenericError(err.Error())
 	}
 
 	return data, nil
