@@ -157,43 +157,54 @@ func (rpc *BakaRpc) handleRequest(req request.Request) (message json.RawMessage,
 		return nil, errors.NewMethodNotFound()
 	}
 
+	numRequiredParams := 0
+	reqParams := req.GetParams()
 	sanitizedParams := map[string]parameters.Param{}
-	params := req.GetParams()
+	// Set default values for everything, assuming we will get all required params
+	for _, param := range method.params {
+		name := param.GetName()
 
-	if params != nil {
-		if params.GetType() == parameters.ByName {
-			for _, param := range method.params {
-				reqParam := params.Get(param.GetName())
-				if reqParam == nil {
+		// Clone and add if required
+		sanitizedParams[name], _ = param.Clone(nil)
+		if param.IsRequired() {
+			numRequiredParams++
+		}
+
+		// Make sure we can assume we get all required params
+		if reqParams.Length() < numRequiredParams {
+			return nil, errors.NewInvalidParams()
+		}
+	}
+
+	// Iterate through the request params to change from default values
+	switch reqParams.GetType() {
+	case parameters.ByName:
+		for _, param := range sanitizedParams {
+			name := param.GetName()
+			reqParam := reqParams.Get(name)
+
+			if reqParam != nil {
+				_ = sanitizedParams[name].SetData(reqParam.GetData())
+			} else {
+				if param.IsRequired() {
 					return nil, errors.NewInvalidParams()
 				}
-				newParam, err := param.Clone(reqParam.GetData())
-				if err != nil {
-					return nil, errors.NewInvalidParams()
-				}
-				sanitizedParams[param.GetName()] = newParam
-			}
-		} else {
-			for key, param := range method.params {
-				reqParam := params.Get(strconv.Itoa(key))
-				if reqParam == nil {
-					return nil, errors.NewInvalidParams()
-				}
-				newParam, err := param.Clone(reqParam.GetData())
-				if err != nil {
-					return nil, errors.NewInvalidParams()
-				}
-				sanitizedParams[param.GetName()] = newParam
 			}
 		}
-	} else {
-		for _, param := range method.params {
-			newParam, err := param.Clone(nil)
-			if err != nil {
-				return nil, errors.NewInvalidParams()
+		break
+	case parameters.ByPosition:
+		for index, param := range method.params {
+			reqParam := reqParams.Get(strconv.Itoa(index))
+
+			if reqParam != nil {
+				_ = sanitizedParams[param.GetName()].SetData(reqParam.GetData())
+			} else {
+				if param.IsRequired() {
+					return nil, errors.NewInvalidParams()
+				}
 			}
-			sanitizedParams[param.GetName()] = newParam
 		}
+		break
 	}
 
 	data, err := (*method.methodFunc)(sanitizedParams)
