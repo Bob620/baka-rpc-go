@@ -131,6 +131,8 @@ func (req *Request) UnmarshalJSON(jsonData []byte) (err error) {
 		if err != nil {
 			return err
 		}
+	} else {
+		req.params = &parameters.Parameters{}
 	}
 
 	// Always required
